@@ -25,21 +25,38 @@ class OptionPricers {
     }
 
     static generateCorrelatedNormals(rho) {
+        if (typeof rho !== 'number' || rho < -1 || rho > 1) {
+            throw new Error('相关系数 rho 必须在 [-1, 1] 范围内');
+        }
+
         const u1 = Math.random();
         const u2 = Math.random();
-        
+
         const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+        // 修正了 z2 的计算
         const z2 = rho * z1 + Math.sqrt(1 - rho * rho) * Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
-        
+
         return [z1, z2];
     }
 
     // Black-Scholes模型
     static blackScholes(type, S, K, T, r, sigma, q) {
         try {
+
+
+            // 将百分比转换为小数
             r = r / 100;
             sigma = sigma / 100;
             q = q / 100;
+
+            // 处理 T = 0 的特殊情况
+            if (T === 0) {
+                if (type === 'call') {
+                    return Math.max(S - K, 0);
+                } else {
+                    return Math.max(K - S, 0);
+                }
+            }
 
             const d1 = (Math.log(S / K) + (r - q + sigma * sigma / 2) * T) / (sigma * Math.sqrt(T));
             const d2 = d1 - sigma * Math.sqrt(T);
@@ -54,6 +71,7 @@ class OptionPricers {
             throw new Error('Black-Scholes计算错误: ' + error.message);
         }
     }
+
 
     // 几何亚式期权定价
     static geometricAsianOption(type, S, K, T, r, sigma, q, n) {

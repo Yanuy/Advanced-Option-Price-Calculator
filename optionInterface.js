@@ -220,12 +220,12 @@ class OptionCalculator {
 
     displayResults(result) {
         // 显示期权价格
-        document.getElementById('optionPrice').textContent = 
+        document.getElementById('optionPrice').textContent =
             typeof result === 'object' ? result.price.toFixed(4) : result.toFixed(4);
 
         // 显示置信区间（如果使用蒙特卡洛方法）
         if (typeof result === 'object' && result.standardError !== undefined) {
-            document.getElementById('confidenceInterval').textContent = 
+            document.getElementById('confidenceInterval').textContent =
                 `±${result.standardError.toFixed(4)}`;
         } else {
             document.getElementById('confidenceInterval').textContent = '';
@@ -234,8 +234,8 @@ class OptionCalculator {
         // 计算并显示内在价值和时间价值
         const params = this.getInputParameters();
         const optionType = document.querySelector('input[name="optionDirection"]:checked')?.value || 'call';
-        const intrinsicValue = optionType === 'call' ? 
-            Math.max(0, params.S - params.K) : 
+        const intrinsicValue = optionType === 'call' ?
+            Math.max(0, params.S - params.K) :
             Math.max(0, params.K - params.S);
         const timeValue = (typeof result === 'object' ? result.price : result) - intrinsicValue;
 
@@ -243,33 +243,116 @@ class OptionCalculator {
         document.getElementById('timeValue').textContent = timeValue.toFixed(4);
 
         // 计算并显示希腊字母
-        const greeks = this.calculateGreeks(params.S);
-        document.getElementById('delta').textContent = greeks.delta.toFixed(4);
-        document.getElementById('gamma').textContent = greeks.gamma.toFixed(4);
-        document.getElementById('vega').textContent = greeks.vega.toFixed(4);
-    }
+        try {
+            const greeks = this.calculateGreeks(params.S);
 
+            // 由于calculateGreeks已经返回格式化的值（toFixed(4)），直接使用
+            document.getElementById('delta').textContent = greeks.delta;
+            document.getElementById('gamma').textContent = greeks.gamma;
+            document.getElementById('theta').textContent = greeks.theta;
+            document.getElementById('vega').textContent = greeks.vega;
+            document.getElementById('rho').textContent = greeks.rho;
+        } catch (error) {
+            console.error('计算Greeks时出错:', error);
+            ['delta', 'gamma', 'theta', 'vega', 'rho'].forEach(greek => {
+                document.getElementById(greek).textContent = '-';
+            });
+        }
+    }
     calculateGreeks(stockPrice) {
         const params = this.getInputParameters();
-        const h = stockPrice * 0.001;
-        const optionType = document.querySelector('input[name="optionDirection"]:checked')?.value || 'call';
+        const h = stockPrice * 0.001;  // 价格步长
+        const dt = 1/365;  // theta的时间步长（1天）
+        const dv = 0.01;   // vega的波动率步长（1%）
+        const dr = 0.01;   // rho的利率步长（1%）
 
-        // 计算Delta
-        const deltaUp = this.calculateOptionPrice(stockPrice + h);
-        const deltaDown = this.calculateOptionPrice(stockPrice - h);
-        const delta = (deltaUp - deltaDown) / (2 * h);
+        try {
+            // Delta计算
+            const deltaUp = window.blackScholes(
+                'call',
+                stockPrice + h,
+                params.K,
+                params.T,
+                params.r,
+                params.sigma,
+                params.q
+            );
+            const deltaDown = window.blackScholes(
+                'call',
+                stockPrice - h,
+                params.K,
+                params.T,
+                params.r,
+                params.sigma,
+                params.q
+            );
+            const delta = (deltaUp - deltaDown) / (2 * h);
 
-        // 计算Gamma
-        const gamma = (deltaUp - 2 * this.calculateOptionPrice(stockPrice) + deltaDown) / (h * h);
+            // Gamma计算
+            const center = window.blackScholes(
+                'call',
+                stockPrice,
+                params.K,
+                params.T,
+                params.r,
+                params.sigma,
+                params.q
+            );
+            const gamma = (deltaUp - 2 * center + deltaDown) / (h * h);
 
-        // 计算Vega
-        const origVol = params.sigma;
-        params.sigma += 0.01;
-        const vegaUp = this.calculateOptionPrice(stockPrice);
-        params.sigma = origVol;
-        const vega = (vegaUp - this.calculateOptionPrice(stockPrice)) / 0.01;
+            // Theta计算
+            const thetaDown = window.blackScholes(
+                'call',
+                stockPrice,
+                params.K,
+                params.T - dt,
+                params.r,
+                params.sigma,
+                params.q
+            );
+            const theta = -(center - thetaDown) / dt;
 
-        return { delta, gamma, vega };
+            // Vega计算
+            const vegaUp = window.blackScholes(
+                'call',
+                stockPrice,
+                params.K,
+                params.T,
+                params.r,
+                params.sigma + dv,
+                params.q
+            );
+            const vega = (vegaUp - center) / dv;
+
+            // Rho计算
+            const rhoUp = window.blackScholes(
+                'call',
+                stockPrice,
+                params.K,
+                params.T,
+                params.r + dr,
+                params.sigma,
+                params.q
+            );
+            const rho = (rhoUp - center) / dr;
+
+            return {
+                delta: delta.toFixed(4),
+                gamma: gamma.toFixed(4),
+                theta: theta.toFixed(4),
+                vega: vega.toFixed(4),
+                rho: rho.toFixed(4)
+            };
+        } catch (error) {
+            console.error('计算Greeks时出错:', error);
+            return {
+                delta: '0.0000',
+                gamma: '0.0000',
+                theta: '0.0000',
+                vega: '0.0000',
+                rho: '0.0000'
+            };
+        }
     }
 
     calculateOptionPrice(stockPrice) {
