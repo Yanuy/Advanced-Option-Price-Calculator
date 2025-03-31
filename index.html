@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级期权定价计算器</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .calculator {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .calculator {
+                grid-template-columns: 1fr;
+            }
+        }
+        .input-section, .result-section {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .optional-section {
+            display: none;
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .parameter-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        .parameter-group h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .result-table th, .result-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .result-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .confidence-interval {
+            color: #666;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        .tab-container {
+            margin-top: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            margin-bottom: -2px;
+        }
+        .tab-button.active {
+            border-bottom: 2px solid #3498db;
+            color: #3498db;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>高级期权定价计算器</h1>
+        <div class="calculator">
+            <div class="input-section">
+                <div class="parameter-group">
+                    <h3>基本设置</h3>
+                    <div class="form-group">
+                        <label for="optionType">期权类型</label>
+                        <select id="optionType">
+                            <option value="european">欧式期权</option>
+                            <option value="arithmetic_asian">算术平均亚式期权</option>
+                            <option value="geometric_asian">几何平均亚式期权</option>
+                            <option value="arithmetic_basket">算术平均篮子期权</option>
+                            <option value="geometric_basket">几何平均篮子期权</option>
+                            <option value="american">美式期权</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="exerciseType">行权类型</label>
+                        <select id="exerciseType">
+                            <option value="call">看涨期权 (Call)</option>
+                            <option value="put">看跌期权 (Put)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pricingMethod">定价方法</label>
+                        <select id="pricingMethod">
+                            <option value="black_scholes">Black-Scholes公式</option>
+                            <option value="monte_carlo">蒙特卡洛模拟</option>
+                            <option value="binomial_tree">二叉树方法</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <h3>基础参数</h3>
+                    <div class="form-group">
+                        <label for="stockPrice">标的资产价格 (S)</label>
+                        <input type="number" id="stockPrice" step="0.01" min="0.01" value="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="strikePrice">行权价格 (K)</label>
+                        <input type="number" id="strikePrice" step="0.01" min="0.01" value="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="timeToExpiry">到期时间 (T，以年计)</label>
+                        <input type="number" id="timeToExpiry" step="0.01" min="0.01" max="10" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="riskFreeRate">无风险利率 (r，百分比)</label>
+                        <input type="number" id="riskFreeRate" step="0.01" min="0" max="100" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="volatility">波动率 (σ，百分比)</label>
+                        <input type="number" id="volatility" step="0.01" min="0.01" max="200" value="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="dividend">股息率 (q，百分比)</label>
+                        <input type="number" id="dividend" step="0.01" min="0" max="100" value="0">
+                    </div>
+                </div>
+
+                <div id="asian-params" class="optional-section parameter-group">
+                    <h3>亚式期权参数</h3>
+                    <div class="form-group">
+                        <label for="observationPoints">观察点数量 (n)</label>
+                        <input type="number" id="observationPoints" min="2" value="12">
+                    </div>
+                </div>
+
+                <div id="basket-params" class="optional-section parameter-group">
+                    <h3>篮子期权参数</h3>
+                    <div class="form-group">
+                        <label for="stockPrice2">第二个资产价格 (S₂)</label>
+                        <input type="number" id="stockPrice2" step="0.01" min="0.01" value="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="volatility2">第二个资产波动率 (σ₂，百分比)</label>
+                        <input type="number" id="volatility2" step="0.01" min="0.01" max="200" value="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="dividend2">第二个资产股息率 (q₂，百分比)</label>
+                        <input type="number" id="dividend2" step="0.01" min="0" max="100" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="correlation">资产相关系数 (ρ)</label>
+                        <input type="number" id="correlation" step="0.01" min="-1" max="1" value="0.5">
+                    </div>
+                </div>
+
+                <div id="monte-carlo-params" class="optional-section parameter-group">
+                    <h3>蒙特卡洛模拟参数</h3>
+                    <div class="form-group">
+                        <label for="numPaths">模拟路径数量</label>
+                        <input type="number" id="numPaths" min="1000" step="1000" value="10000">
+                    </div>
+                    <div class="form-group">
+                        <label for="useControlVariate">
+                            <input type="checkbox" id="useControlVariate" checked>
+                            使用控制变量方差缩减
+                        </label>
+                    </div>
+                </div>
+
+                <div id="binomial-params" class="optional-section parameter-group">
+                    <h3>二叉树参数</h3>
+                    <div class="form-group">
+                        <label for="numSteps">树节点数量</label>
+                        <input type="number" id="numSteps" min="10" step="10" value="100">
+                    </div>
+                </div>
+
+                <button id="calculate">计算</button>
+            </div>
+
+            <div class="result-section">
+                <h2>计算结果</h2>
+                <table class="result-table">
+                    <tr>
+                        <th>参数</th>
+                        <th>值</th>
+                    </tr>
+                    <tr>
+                        <td>期权价格</td>
+                        <td>
+                            <span id="optionPrice">-</span>
+                            <span id="confidenceInterval" class="confidence-interval"></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>内在价值</td>
+                        <td id="intrinsicValue">-</td>
+                    </tr>
+                    <tr>
+                        <td>时间价值</td>
+                        <td id="timeValue">-</td>
+                    </tr>
+                </table>
+
+                <div class="tab-container">
+                    <div class="tab-buttons">
+                        <button class="tab-button active" data-tab="greeks">期权希腊字母</button>
+                        <button class="tab-button" data-tab="explanation">计算说明</button>
+                    </div>
+
+                    <div id="greeks" class="tab-content active">
+                        <table class="result-table">
+                            <tr>
+                                <th>希腊字母</th>
+                                <th>值</th>
+                                <th>说明</th>
+                            </tr>
+                            <tr>
+                                <td>Delta (Δ)</td>
+                                <td id="delta">-</td>
+                                <td>期权价格对标的资产价格的敏感性</td>
+                            </tr>
+                            <tr>
+                                <td>Gamma (Γ)</td>
+                                <td id="gamma">-</td>
+                                <td>Delta对标的资产价格的敏感性</td>
+                            </tr>
+                            <tr>
+                                <td>Theta (Θ)</td>
+                                <td id="theta">-</td>
+                                <td>期权价格对时间的敏感性</td>
+                            </tr>
+                            <tr>
+                                <td>Vega (ν)</td>
+                                <td id="vega">-</td>
+                                <td>期权价格对波动率的敏感性</td>
+                            </tr>
+                            <tr>
+                                <td>Rho (ρ)</td>
+                                <td id="rho">-</td>
+                                <td>期权价格对利率的敏感性</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div id="explanation" class="tab-content">
+                        <div class="explanation">
+                            <h3>定价方法说明</h3>
+                            <div id="pricing-explanation"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="visualization-section">
+                    <h2>可视化分析</h2>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="greeksChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="optionPricers.js"></script>
+    <script src="optionInterface.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof window.blackScholes !== 'function') {
+                console.error('警告：期权定价函数未正确加载');
+            }
+            window.calculator = new OptionCalculator();
+            
+            // 添加标签切换功能
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // 更新按钮状态
+                    document.querySelectorAll('.tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    
+                    // 更新内容显示
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
