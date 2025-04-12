@@ -14,24 +14,28 @@
         <div class="calculator">
             <div class="input-section">
                 <h2>输入参数</h2>
-                
+
+                <!-- 期权类型 -->
                 <div class="form-group">
                     <label for="optionType">期权类型</label>
                     <select id="optionType">
-                        <option value="europeanCall">欧式看涨期权 (European Call)</option>
-                        <option value="europeanPut">欧式看跌期权 (European Put)</option>
-                        <option value="americanCall">美式看涨期权 (American Call)</option>
-                        <option value="americanPut">美式看跌期权 (American Put)</option>
-                        <option value="geometricAsianCall">几何亚式看涨期权 (Geometric Asian Call)</option>
-                        <option value="geometricAsianPut">几何亚式看跌期权 (Geometric Asian Put)</option>
-                        <option value="arithmeticAsianCall">算术亚式看涨期权 (Arithmetic Asian Call)</option>
-                        <option value="arithmeticAsianPut">算术亚式看跌期权 (Arithmetic Asian Put)</option>
-                        <option value="geometricBasketCall">几何篮式看涨期权 (Geometric Basket Call)</option>
-                        <option value="geometricBasketPut">几何篮式看跌期权 (Geometric Basket Put)</option>
-                        <option value="arithmeticBasketCall">算术篮式看涨期权 (Arithmetic Basket Call)</option>
-                        <option value="arithmeticBasketPut">算术篮式看跌期权 (Arithmetic Basket Put)</option>
-                        <option value="kikoPut">KIKO看跌期权 (KIKO Put)</option>
+                        <option value="european">欧式期权 (European Option)</option>
+                        <option value="american">美式期权 (American Option)</option>
+                        <option value="geometricAsian">几何亚式期权 (Geometric Asian Option)</option>
+                        <option value="arithmeticAsian">算术亚式期权 (Arithmetic Asian Option)</option>
+                        <option value="geometricBasket">几何篮式期权 (Geometric Basket Option)</option>
+                        <option value="arithmeticBasket">算术篮式期权 (Arithmetic Basket Option)</option>
+                        <option value="kiko">KIKO期权 (KIKO Option)</option>
                         <option value="impliedVol">隐含波动率计算 (Implied Volatility)</option>
+                    </select>
+                </div>
+
+                <!-- 看涨看跌 -->
+                <div class="form-group">
+                    <label for="optionDirection">期权方向</label>
+                    <select id="optionDirection">
+                        <option value="call">看涨 (Call)</option>
+                        <option value="put">看跌 (Put)</option>
                     </select>
                 </div>
                 
@@ -48,7 +52,7 @@
                 
                 <div class="form-group">
                     <label for="timeToExpiry">到期时间 (T，以年计)</label>
-                    <input type="number" id="timeToExpiry" step="0.01" min="0.0001" max="100" value="3">
+                    <input type="number" id="timeToExpiry" step="0.01" min="0.0001" max="1000" value="3">
                 </div>
                 
                 <div class="form-group">
@@ -114,19 +118,12 @@
                 <!-- 隐含波动率参数 -->
                 <div class="form-group" id="impliedVolParams" style="display: none;">
                     <div class="form-group">
-                        <label for="impliedVolType">期权类型</label>
-                        <select id="impliedVolType">
-                            <option value="call">看涨期权 (Call)</option>
-                            <option value="put">看跌期权 (Put)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
                         <label for="marketPrice">期权市场价格</label>
                         <input type="number" id="marketPrice" step="0.01" min="0" value="10">
                     </div>
                 </div>
                 
-                <button id="calculate">计算</button>
+                <button id="calculate">计算 calculate</button>
             </div>
             
             <div class="result-section">
@@ -165,51 +162,15 @@
                         </tr>
                     </table>
                 </div>
-                
+
                 <div class="tab-container">
                     <div class="tab-buttons">
-<!--                        <button class="tab-button active" data-tab="greeks">希腊字母(Greeks)</button>-->
-                        <button class="tab-button active" data-tab="explanation">公式解释</button>
+                        <button class="tab-button active" data-tab="explanation">公式解释 / Formula</button>
+                        <button id="languageSwitch" class="language-switch">中文 / English</button>
                     </div>
-<!--                    -->
-<!--                    <div id="greeks" class="tab-content active">-->
-<!--                        <table class="result-table">-->
-<!--                            <tr>-->
-<!--                                <th>希腊字母</th>-->
-<!--                                <th>值</th>-->
-<!--                                <th>解释</th>-->
-<!--                            </tr>-->
-<!--                            <tr>-->
-<!--                                <td>Delta (Δ)</td>-->
-<!--                                <td id="delta">-</td>-->
-<!--                                <td>期权价格对标的资产价格的一阶导数</td>-->
-<!--                            </tr>-->
-<!--                            <tr>-->
-<!--                                <td>Gamma (Γ)</td>-->
-<!--                                <td id="gamma">-</td>-->
-<!--                                <td>Delta对标的资产价格的一阶导数</td>-->
-<!--                            </tr>-->
-<!--                            <tr>-->
-<!--                                <td>Theta (Θ)</td>-->
-<!--                                <td id="theta">-</td>-->
-<!--                                <td>期权价格对时间的一阶导数</td>-->
-<!--                            </tr>-->
-<!--                            <tr>-->
-<!--                                <td>Vega (ν)</td>-->
-<!--                                <td id="vega">-</td>-->
-<!--                                <td>期权价格对波动率的一阶导数</td>-->
-<!--                            </tr>-->
-<!--                            <tr>-->
-<!--                                <td>Rho (ρ)</td>-->
-<!--                                <td id="rho">-</td>-->
-<!--                                <td>期权价格对无风险利率的一阶导数</td>-->
-<!--                            </tr>-->
-<!--                        </table>-->
-<!--                    </div>-->
-<!--                    -->
                     <div id="explanation" class="tab-content active">
                         <div class="explanation">
-                            <h3>定价模型说明</h3>
+                            <h3 id="modelTitle">定价模型说明</h3>
                             <div id="modelExplanation">
                             </div>
                         </div>

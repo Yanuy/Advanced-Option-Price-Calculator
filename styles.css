@@ -129,3 +129,17 @@ button:hover {
 .explanation h3 {
     margin-top: 0;
 }
+
+.language-switch {
+    padding: 8px 16px;
+    margin-left: 10px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.language-switch:hover {
+    background-color: #e0e0e0;
+}
