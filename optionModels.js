@@ -1,3 +1,4 @@
+
 // 正态累积分布函数
 function cdf(x) {
     return jStat.normal.cdf(x, 0, 1);
@@ -149,7 +150,7 @@ function arithmeticAsianOption(type, S, K, T, r, sigma, n, paths, controlVariate
             confidence: confInterval
         };
     } else {
-        // 原来的蒙特卡洛模拟
+        // 蒙特卡洛模拟
         for(let i = 0; i < paths; i++) {
             let path = Array(n + 1).fill(S);
             let arithmetic = S;
@@ -195,7 +196,7 @@ function geometricBasketOption(type, S1, S2, K, T, r, sigma1, sigma2, rho, q = 0
     sigma1 = sigma1 / 100;
     sigma2 = sigma2 / 100;
     r = r / 100;
-    q = q / 100;
+
 
     const sigmaB = Math.sqrt(Math.pow(sigma1, 2) + 2 * rho * sigma1 * sigma2 + Math.pow(sigma2, 2)) / 2;
     const muB = r - 0.5 * (Math.pow(sigma1, 2) + Math.pow(sigma2, 2)) / 2 + 0.5 * Math.pow(sigmaB, 2);
@@ -247,40 +248,78 @@ function arithmeticBasketOption(type, S1, S2, K, T, r, sigma1, sigma2, rho, path
     };
 }
 
-// KIKO看跌期权
+// KIKO看跌期权-QMC
 function kikoOption(S, K, T, r, sigma, L, U, n, R, q = 0) {
     r = r / 100;
     sigma = sigma / 100;
     q = q / 100;
-    
+
     const dt = T / n;
-    let sum = 0;
-    const paths = 10000;
-    
-    for(let i = 0; i < paths; i++) {
-        let St = S;
-        let pathKnockIn = false;
-        let pathKnockOut = false;
-        
-        for(let j = 1; j <= n; j++) {
-            const z = normalRandom();
-            St = St * Math.exp((r - q - 0.5 * Math.pow(sigma, 2)) * dt + sigma * Math.sqrt(dt) * z);
-            
-            if(St <= L) pathKnockIn = true;
-            if(St >= U) pathKnockOut = true;
+    const paths = 100000;
+
+    function calculatePrice(currentS) {
+        let localSum = 0;
+        let localSumSquared = 0;
+
+        for(let i = 0; i < paths; i++) {
+            let St = currentS;
+            let pathKnockIn = false;
+            let pathKnockOut = false;
+
+            for(let j = 1; j <= n; j++) {
+                const z = normalRandom();
+                St = St * Math.exp((r - q - 0.5 * Math.pow(sigma, 2)) * dt + sigma * Math.sqrt(dt) * z);
+
+                if(St <= L) pathKnockIn = true;
+                if(St >= U) pathKnockOut = true;
+            }
+
+            let payoff = 0;
+            if(pathKnockOut) {
+                payoff = R;
+            } else if(pathKnockIn) {
+                payoff = Math.max(0, K - St);
+            }
+
+            payoff *= Math.exp(-r * T);  // Discount the payoff
+            localSum += payoff;
+            localSumSquared += payoff * payoff;
         }
-        
-        let payoff = 0;
-        if(pathKnockOut) {
-            payoff = R;
-        } else if(pathKnockIn) {
-            payoff = Math.max(0, K - St);
-        }
-        
-        sum += payoff;
+
+        const localMean = localSum / paths;
+        const localStdDev = Math.sqrt((localSumSquared / paths - localMean * localMean) / (paths - 1));
+        const localConfInterval = 1.96 * localStdDev / Math.sqrt(paths);
+
+        return {
+            price: localMean,
+            confidence: localConfInterval
+        };
     }
-    
-    return (sum / paths) * Math.exp(-r * T);
+
+    // Calculate price at S
+    const resultAtS = calculatePrice(S);
+
+    // Calculate price at S + dS
+    const dS = 0.01 * S;  // Small change in S (1% of S)
+    const resultAtSPlusdS = calculatePrice(S + dS);
+
+    // Calculate delta
+    const delta = (resultAtSPlusdS.price - resultAtS.price) / dS;
+
+    // Create result object
+    const result = {
+        price: resultAtS.price,
+        confidence: resultAtS.confidence,
+        delta: delta
+    };
+
+    // Show all results in alert
+    alert(`
+价格 (Price): ${result.price.toFixed(4)}
+Delta: ${delta.toFixed(6)}
+    `);
+
+    return result;
 }
 
 function impliedVolatility(type, marketPrice, S, K, T, r, q = 0) {
@@ -359,3 +398,4 @@ function calculateGreeks(type, S, K, T, r, sigma, q = 0) {
     
     return { delta, gamma, theta, vega, rho };
 }
+

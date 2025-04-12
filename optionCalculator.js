@@ -142,25 +142,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     break;
 
                 case 'geometricAsian':
-                    if (!n) {
-                        throw new Error('缺少观察次数参数');
-                    }
                     result = geometricAsianOption(direction, S, K, T, r, sigma, n, q);
                     updateResults(result, type, direction);
                     break;
 
                 case 'arithmeticAsian':
-                    if (!paths || !n) {
-                        throw new Error('缺少蒙特卡洛模拟所需参数');
-                    }
                     result = arithmeticAsianOption(direction, S, K, T, r, sigma, n, paths, controlVariate, q);
                     updateMonteCarloResults(result, type, direction);
                     break;
 
                 case 'geometricBasket':
-                    if (!S2) {
-                        throw new Error('缺少第二个资产价格');
-                    }
                     const sigma2 = parseFloat(document.getElementById('vol2').value);
                     const rho = parseFloat(document.getElementById('correlation').value);
                     result = geometricBasketOption(direction, S, S2, K, T, r, sigma, sigma2, rho, q);
@@ -168,9 +159,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     break;
 
                 case 'arithmeticBasket':
-                    if (!paths || !S2) {
-                        throw new Error('缺少蒙特卡洛模拟或篮式期权所需参数');
-                    }
                     const sigma2Arith = parseFloat(document.getElementById('vol2').value);
                     const rhoArith = parseFloat(document.getElementById('correlation').value);
                     result = arithmeticBasketOption(direction, S, S2, K, T, r, sigma, sigma2Arith, rhoArith, paths, controlVariate, q);
@@ -183,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const n1 = parseFloat(document.getElementById('observationTime').value);
                     const R = parseFloat(document.getElementById('rebate').value);
                     result = kikoOption(S, K, T, r, sigma, L, U, n1, R, q);
-                    updateResults(result, 'kiko', direction);
+                    updateMonteCarloResults(result, type, direction); // 改用 updateMonteCarloResults 而不是 updateResults
                     break;
 
                 case 'impliedVol':
@@ -237,20 +225,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 Math.max(0, K - S) : Math.max(0, S - K);
             const timeVal = price - intrinsicVal;
 
-            document.getElementById('optionPrice').textContent = price.toFixed(4);
-            document.getElementById('intrinsicValue').textContent = intrinsicVal.toFixed(4);
-            document.getElementById('timeValue').textContent = timeVal.toFixed(4);
+            document.getElementById('optionPrice').textContent = price.toFixed(6);
+            document.getElementById('intrinsicValue').textContent = intrinsicVal.toFixed(6);
+            document.getElementById('timeValue').textContent = timeVal.toFixed(6);
 
-            if (!type.includes('kiko')) {
-                const r = parseFloat(document.getElementById('riskFreeRate').value);
-                const sigma = parseFloat(document.getElementById('volatility').value);
-                const T = parseFloat(document.getElementById('timeToExpiry').value);
-                const q = parseFloat(document.getElementById('dividend').value);
-
-                const greeks = calculateGreeks(type.includes('Put') ? 'put' : 'call',
-                    S, K, T, r, sigma, q);
-                // updateGreeks(greeks);
-            }
+            // if (!type.includes('kiko')) {
+            //     const r = parseFloat(document.getElementById('riskFreeRate').value);
+            //     const sigma = parseFloat(document.getElementById('volatility').value);
+            //     const T = parseFloat(document.getElementById('timeToExpiry').value);
+            //     const q = parseFloat(document.getElementById('dividend').value);
+            //
+            //     const greeks = calculateGreeks(type.includes('Put') ? 'put' : 'call',
+            //         S, K, T, r, sigma, q);
+            //     // updateGreeks(greeks);
+            // }
         } else {
             document.getElementById('optionPrice').textContent = 'N/A';
             document.getElementById('intrinsicValue').textContent = 'N/A';
@@ -261,18 +249,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // 更新蒙特卡洛结果
     function updateMonteCarloResults(result, type) {
         document.getElementById('monteCarloResults').style.display = 'block';
-        document.getElementById('mcPrice').textContent = result.price.toFixed(4);
+        document.getElementById('mcPrice').textContent = result.price.toFixed(6);
         document.getElementById('mcConfidence').textContent =
-            `${(result.price - result.confidence).toFixed(4)} - ${(result.price + result.confidence).toFixed(4)}`;
+            `${(result.price - result.confidence).toFixed(6)} - ${(result.price + result.confidence).toFixed(6)}`;
 
         // 更新主要结果表格
-        document.getElementById('optionPrice').textContent = result.price.toFixed(4);
+        document.getElementById('optionPrice').textContent = result.price.toFixed(6);
         const S = parseFloat(document.getElementById('stockPrice').value);
         const K = parseFloat(document.getElementById('strikePrice').value);
         const intrinsicVal = type.includes('Put') ?
             Math.max(0, K - S) : Math.max(0, S - K);
-        document.getElementById('intrinsicValue').textContent = intrinsicVal.toFixed(4);
-        document.getElementById('timeValue').textContent = (result.price - intrinsicVal).toFixed(4);
+        document.getElementById('intrinsicValue').textContent = intrinsicVal.toFixed(6);
+        document.getElementById('timeValue').textContent = (result.price - intrinsicVal).toFixed(6);
     }
 
     // 更新希腊字母
@@ -303,12 +291,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(tabId).classList.add('active');
         });
     });
-
-    // 初始化 - 触发欧式看涨期权的计算
-    document.getElementById('modelExplanation').innerHTML = explanations['european'];
-    document.getElementById('calculate').click();
-    updateModelExplanation(type);
-    // document.getElementById('calculate').click();
 });
 
 
@@ -595,9 +577,6 @@ function updateLanguage() {
             option.textContent = translations[currentLanguage].inputs.controlVariateOptions[value];
         });
     }
-
-    // 更新当前模型说明
-    updateModelExplanation(document.getElementById('optionType').value);
 }
 function generateInitialExplanation(lang) {
     const text = translations[lang].initialExplanation;
