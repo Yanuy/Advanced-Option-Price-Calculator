@@ -1,18 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // 更新模型说明
-    // 立即显示使用说明
-    document.getElementById('modelExplanation').innerHTML = `
-        <h3>期权计算器使用说明</h3>
-        <p>欢迎使用期权定价计算器。本计算器支持以下类型的期权定价：</p>
-        <ul>
-            <li>欧式期权（Black-Scholes模型）</li>
-            <li>美式期权（二叉树模型）</li>
-            <li>亚式期权（几何/算术平均）</li>
-            <li>篮式期权（多资产组合）</li>
-            <li>KIKO期权（障碍货币期权）</li>
-        </ul>
-        <p>请在左上方选择期权类型开始计算。选择后将显示详细说明。</p>
-    `;
+    document.getElementById('modelExplanation').innerHTML = generateInitialExplanation(currentLanguage);
     function updateModelExplanation(type) {
         const explanations = {
             european: `
@@ -300,18 +288,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', function() {
             const tabId = this.getAttribute('data-tab');
-            // document.getElementById('modelExplanation').innerHTML = `
-            //         <h3>期权计算器使用说明</h3>
-            //         <p>欢迎使用期权定价计算器。本计算器支持以下类型的期权定价：</p>
-            //         <ul>
-            //             <li>欧式期权（Black-Scholes模型）</li>
-            //             <li>美式期权（二叉树模型）</li>
-            //             <li>亚式期权（几何/算术平均）</li>
-            //             <li>篮式期权（多资产组合）</li>
-            //             <li>KIKO期权（障碍期权）</li>
-            //         </ul>
-            //         <p>请在上方选择期权类型开始计算。选择后将显示详细说明。</p>
-            //     `;
+            // if (!document.getElementById('optionType').value) {
+            //     document.getElementById('modelExplanation').innerHTML = generateInitialExplanation(currentLanguage);
+            // }
 
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
@@ -345,6 +324,18 @@ const translations = {
                 value: "值"
             }
         },
+        initialExplanation: {
+            title: "期权计算器使用说明",
+            welcome: "欢迎使用期权定价计算器。本计算器支持以下类型的期权定价：",
+            optionTypes: {
+                european: "欧式期权（Black-Scholes模型）",
+                american: "美式期权（二叉树模型）",
+                asian: "亚式期权（几何/算术平均）",
+                basket: "篮式期权（多资产组合）",
+                kiko: "KIKO期权（障碍货币期权）"
+            },
+            instruction: "请在左上方选择期权类型开始计算。选择后将显示详细说明。"
+        },
         modelTitle: "定价模型说明",
         optionType: {
             label: "期权类型",
@@ -362,6 +353,7 @@ const translations = {
             call: "看涨",
             put: "看跌"
         },
+
         inputs: {
             stockPrice: "标的资产价格 (S)",
             strikePrice: "行权价格 (K)",
@@ -373,6 +365,10 @@ const translations = {
             observationTimes: "观察次数 (n)",
             numPaths: "模拟路径数",
             controlVariate: "控制变量方法",
+            controlVariateOptions: {
+                none: "不使用控制变量",
+                geometric: "使用几何均值作为控制变量"
+            },
             spot2: "第二个资产价格 (S2)",
             vol2: "第二个资产波动率 (σ2，百分比)",
             correlation: "相关系数 (ρ)",
@@ -431,6 +427,18 @@ const translations = {
                 value: "Value"
             }
         },
+        initialExplanation: {
+            title: "Option Calculator Instructions",
+            welcome: "Welcome to the Option Pricing Calculator. This calculator supports the following types of option pricing:",
+            optionTypes: {
+                european: "European Options (Black-Scholes Model)",
+                american: "American Options (Binomial Tree Model)",
+                asian: "Asian Options (Geometric/Arithmetic Average)",
+                basket: "Basket Options (Multi-Asset Portfolio)",
+                kiko: "KIKO Options (Barrier Currency Options)"
+            },
+            instruction: "Please select an option type from the top left to begin calculation. Detailed instructions will be displayed after selection."
+        },
         modelTitle: "Pricing Model Description",
         optionType: {
             label: "Option Type",
@@ -459,6 +467,10 @@ const translations = {
             observationTimes: "Observation Times (n)",
             numPaths: "Simulation Paths",
             controlVariate: "Control Variate Method",
+            controlVariateOptions: {
+                none: "No Control Variate",
+                geometric: "Use Geometric Average as Control"
+            },
             spot2: "Second Asset Price (S2)",
             vol2: "Second Asset Volatility (σ2, percentage)",
             correlation: "Correlation (ρ)",
@@ -522,6 +534,10 @@ function updateLanguage() {
     // 更新页面主标题
     document.querySelector('h1').textContent = translations[currentLanguage].pageTitle;
 
+
+    document.getElementById('modelExplanation').innerHTML = generateInitialExplanation(currentLanguage);
+
+
     // 更新section标题
     document.querySelector('.input-section h2').textContent =
         translations[currentLanguage].sections.inputSection;
@@ -572,7 +588,29 @@ function updateLanguage() {
             element.textContent = label;
         }
     });
+    const controlVariateSelect = document.getElementById('controlVariate');
+    if (controlVariateSelect) {
+        Array.from(controlVariateSelect.options).forEach(option => {
+            const value = option.value;
+            option.textContent = translations[currentLanguage].inputs.controlVariateOptions[value];
+        });
+    }
 
     // 更新当前模型说明
     updateModelExplanation(document.getElementById('optionType').value);
+}
+function generateInitialExplanation(lang) {
+    const text = translations[lang].initialExplanation;
+    return `
+        <h3>${text.title}</h3>
+        <p>${text.welcome}</p>
+        <ul>
+            <li>${text.optionTypes.european}</li>
+            <li>${text.optionTypes.american}</li>
+            <li>${text.optionTypes.asian}</li>
+            <li>${text.optionTypes.basket}</li>
+            <li>${text.optionTypes.kiko}</li>
+        </ul>
+        <p>${text.instruction}</p>
+    `;
 }
