@@ -4,8 +4,6 @@ function cdf(x) {
     return jStat.normal.cdf(x, 0, 1);
 }
 
-
-
 // Black-Scholes欧式期权定价模型
 function blackScholes(type, S, K, T, r, sigma, q = 0) {
     r = r / 100;
@@ -93,7 +91,7 @@ function arithmeticAsianOption(type, S, K, T, r, sigma, n, paths, controlVariate
     const dt = T / n;
     let sumArith = 0;
     let sumSquaredArith = 0;
-
+    Math.seedrandom('1')
     // 如果使用控制变量法
     if (controlVariate) {
         const geoValue = geometricAsianOption(type, S, K, T, r * 100, sigma * 100, n, q * 100);
@@ -218,7 +216,7 @@ function arithmeticBasketOption(type, S1, S2, K, T, r, sigma1, sigma2, rho, path
     sigma2 = sigma2 / 100;
     r = r / 100;
     q = q / 100;
-
+    Math.seedrandom('1')
     let sum = 0;
     let sumSquared = 0;
 
@@ -253,7 +251,7 @@ function kikoOption(S, K, T, r, sigma, L, U, n, R, q = 0) {
     r = r / 100;
     sigma = sigma / 100;
     q = q / 100;
-
+    Math.seedrandom('1')
     const dt = T / n;
     const paths = 100000;
 
