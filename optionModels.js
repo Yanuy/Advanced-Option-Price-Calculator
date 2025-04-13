@@ -93,7 +93,7 @@ function arithmeticAsianOption(type, S, K, T, r, sigma, n, paths, controlVariate
     let sumSquaredArith = 0;
     Math.seedrandom('1')
     // 如果使用控制变量法
-    if (controlVariate) {
+    if (controlVariate === 'geometric') {
         const geoValue = geometricAsianOption(type, S, K, T, r * 100, sigma * 100, n, q * 100);
         let sumCov = 0;
         let sumGeo = 0;
@@ -149,6 +149,7 @@ function arithmeticAsianOption(type, S, K, T, r, sigma, n, paths, controlVariate
         };
     } else {
         // 蒙特卡洛模拟
+        // alert(`Parameters: type=${type}, S=${S}, K=${K}, T=${T}, r=${r}, sigma=${sigma}, n=${n}, paths=${paths}, controlVariate=${controlVariate}, q=${q}`);
         for(let i = 0; i < paths; i++) {
             let path = Array(n + 1).fill(S);
             let arithmetic = S;
@@ -210,42 +211,96 @@ function geometricBasketOption(type, S1, S2, K, T, r, sigma1, sigma2, rho, q = 0
     }
 }
 
-// 算术篮式期权（蒙特卡洛模拟）
 function arithmeticBasketOption(type, S1, S2, K, T, r, sigma1, sigma2, rho, paths, controlVariate, q = 0) {
+    // Convert percentages to decimals
     sigma1 = sigma1 / 100;
     sigma2 = sigma2 / 100;
     r = r / 100;
     q = q / 100;
-    Math.seedrandom('1')
-    let sum = 0;
-    let sumSquared = 0;
 
-    for(let i = 0; i < paths; i++) {
-        const z1 = normalRandom();
-        const z2 = rho * z1 + Math.sqrt(1 - Math.pow(rho, 2)) * normalRandom();
+    Math.seedrandom('1');
+    let sumArith = 0;
+    let sumSquaredArith = 0;
 
-        const ST1 = S1 * Math.exp((r - q - 0.5 * Math.pow(sigma1, 2)) * T + sigma1 * Math.sqrt(T) * z1);
-        const ST2 = S2 * Math.exp((r - q - 0.5 * Math.pow(sigma2, 2)) * T + sigma2 * Math.sqrt(T) * z2);
+    // If using control variate technique
+    if (controlVariate === 'geometric') {
+        const geoValue = geometricBasketOption(type, S1, S2, K, T, r * 100, sigma1 * 100, sigma2 * 100, rho, q * 100);
+        let sumCov = 0;
+        let sumGeo = 0;
+        let sumSquaredGeo = 0;
 
-        const arithmetic = (ST1 + ST2) / 2;
-        let payoff = type === 'call' ?
-            Math.max(0, arithmetic - K) :
-            Math.max(0, K - arithmetic);
+        for (let i = 0; i < paths; i++) {
+            const z1 = normalRandom();
+            const z2 = rho * z1 + Math.sqrt(1 - Math.pow(rho, 2)) * normalRandom();
 
-        sum += payoff;
-        sumSquared += payoff * payoff;
+            const ST1 = S1 * Math.exp((r - q - 0.5 * Math.pow(sigma1, 2)) * T + sigma1 * Math.sqrt(T) * z1);
+            const ST2 = S2 * Math.exp((r - q - 0.5 * Math.pow(sigma2, 2)) * T + sigma2 * Math.sqrt(T) * z2);
+
+            const arithmetic = (ST1 + ST2) / 2;
+            const geometric = Math.sqrt(ST1 * ST2);
+
+            let arithPayoff = type === 'call' ?
+                Math.max(0, arithmetic - K) :
+                Math.max(0, K - arithmetic);
+
+            let geoPayoff = type === 'call' ?
+                Math.max(0, geometric - K) :
+                Math.max(0, K - geometric);
+
+            arithPayoff *= Math.exp(-r * T);
+            geoPayoff *= Math.exp(-r * T);
+
+            sumArith += arithPayoff;
+            sumSquaredArith += arithPayoff * arithPayoff;
+            sumGeo += geoPayoff;
+            sumSquaredGeo += geoPayoff * geoPayoff;
+            sumCov += arithPayoff * geoPayoff;
+        }
+
+        const meanArith = sumArith / paths;
+        const meanGeo = sumGeo / paths;
+        const covariance = sumCov / paths - meanArith * meanGeo;
+        const varGeo = sumSquaredGeo / paths - meanGeo * meanGeo;
+        const theta = covariance / varGeo;
+
+        const controlVariateEstimator = meanArith + theta * (geoValue - meanGeo);
+        const stdDev = Math.sqrt((sumSquaredArith / paths - meanArith * meanArith) / (paths - 1));
+        const confInterval = 1.96 * stdDev / Math.sqrt(paths);
+
+        return {
+            price: controlVariateEstimator,
+            confidence: confInterval
+        };
+    } else {
+        // Standard Monte Carlo simulation without control variate
+        for (let i = 0; i < paths; i++) {
+            const z1 = normalRandom();
+            const z2 = rho * z1 + Math.sqrt(1 - Math.pow(rho, 2)) * normalRandom();
+
+            const ST1 = S1 * Math.exp((r - q - 0.5 * Math.pow(sigma1, 2)) * T + sigma1 * Math.sqrt(T) * z1);
+            const ST2 = S2 * Math.exp((r - q - 0.5 * Math.pow(sigma2, 2)) * T + sigma2 * Math.sqrt(T) * z2);
+
+            const arithmetic = (ST1 + ST2) / 2;
+            let payoff = type === 'call' ?
+                Math.max(0, arithmetic - K) :
+                Math.max(0, K - arithmetic);
+
+            payoff *= Math.exp(-r * T);
+
+            sumArith += payoff;
+            sumSquaredArith += payoff * payoff;
+        }
+
+        const mean = sumArith / paths;
+        const stdDev = Math.sqrt((sumSquaredArith / paths - mean * mean) / (paths - 1));
+        const confInterval = 1.96 * stdDev / Math.sqrt(paths);
+
+        return {
+            price: mean,
+            confidence: confInterval
+        };
     }
-
-    const mean = sum / paths;
-    const stdDev = Math.sqrt((sumSquared / paths - mean * mean) / (paths - 1));
-    const confInterval = 1.96 * stdDev / Math.sqrt(paths);
-
-    return {
-        price: mean * Math.exp(-r * T),
-        confidence: confInterval * Math.exp(-r * T)
-    };
 }
-
 // KIKO看跌期权-QMC
 function kikoOption(S, K, T, r, sigma, L, U, n, R, q = 0) {
     r = r / 100;
