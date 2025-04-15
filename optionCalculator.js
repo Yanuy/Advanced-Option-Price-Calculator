@@ -318,7 +318,7 @@ const translations = {
             },
             instruction: "请在左上方选择期权类型开始计算。选择后将显示详细说明。"
         },
-        modelTitle: "定价模型说明",
+        modelTitle: "期权计算器-yan1@connect.hku.hk",
         optionType: {
             label: "期权类型",
             european: "欧式期权",
@@ -421,7 +421,7 @@ const translations = {
             },
             instruction: "Please select an option type from the top left to begin calculation. Detailed instructions will be displayed after selection."
         },
-        modelTitle: "Pricing Model Description",
+        modelTitle: "Option Calculator-yan1@connect.hku.hk",
         optionType: {
             label: "Option Type",
             european: "European Option",
